@@ -1,70 +1,89 @@
-# Getting Started with Create React App
+## Todo App (React)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Aplicación simple de lista de tareas construida con React y Create React App.
 
-## Available Scripts
+Permite agregar tareas con validación, muestra un contador y la fecha/hora de creación por cada tarea, y cuenta con estilos básicos y accesibles.
 
-In the project directory, you can run:
+## Características
 
-### `npm start`
+- Ingreso de tareas mediante input y botón “Agregar”.
+- Validación de entrada:
+	- Evita tareas vacías (se deshabilita el botón si el texto está vacío/espacios).
+	- Evita duplicados (comparación insensible a mayúsculas/minúsculas).
+- Contador de tareas visible en el título (singular/plural).
+- Fecha y hora de creación junto a cada tarea (formato local usando Intl.DateTimeFormat).
+- Tecla Enter para agregar rápidamente.
+- Mensaje de error accesible cuando hay duplicados.
+- Componente reutilizable `TaskItem` para representar cada tarea.
+- Estilos cuidando la usabilidad (clases en `src/App.css`).
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Estructura del proyecto
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
+todo-app/
+	package.json
+	README.md
+	public/
+		index.html
+		...
+	src/
+		App.js
+		App.css
+		App.test.js
+		TaskItem.js
+		index.js
+		...
+```
 
-### `npm test`
+## Requisitos
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js y npm instalados.
 
-### `npm run build`
+## Instalación y ejecución
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Instalar dependencias.
+2. Ejecutar en modo desarrollo.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Comandos (zsh/macOS):
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm install
+npm start
+```
 
-### `npm run eject`
+La app se abrirá en http://localhost:3000.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Pruebas
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Se incluye una prueba básica para verificar que se puede agregar una tarea.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+npm test
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Para correr los tests una sola vez en CI:
 
-## Learn More
+```bash
+npm test -- --watchAll=false
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Scripts disponibles
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+- `npm start`: inicia el servidor de desarrollo.
+- `npm test`: ejecuta la suite de tests en modo interactivo.
+- `npm run build`: compila la app para producción en `build/`.
 
-### Code Splitting
+## Decisiones técnicas y notas
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- Cada tarea se modela como `{ id, text, createdAt }`.
+- `createdAt` se guarda en formato ISO (toISOString) y se formatea al renderizar.
+- Duplicados: se comparan textos normalizados en minúsculas (case-insensitive).
+- Accesibilidad: se usan `aria-label` en el input, `role="alert"` para errores y títulos descriptivos.
 
-### Analyzing the Bundle Size
+## Posibles mejoras
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- Eliminar/editar tareas.
+- Persistencia en `localStorage`.
+- Filtrado (todas/completadas/pendientes) y completado de tareas.
+- Pruebas adicionales (validaciones, accesibilidad, formato de fecha).
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
