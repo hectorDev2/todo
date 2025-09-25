@@ -1,8 +1,13 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen, fireEvent } from "@testing-library/react";
+import App from "./App";
 
-test('renders learn react link', () => {
+test("puede agregar una tarea", () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  const input = screen.getByPlaceholderText(/escribe una tarea/i);
+  const button = screen.getByRole("button", { name: /agregar/i });
+  expect(button).toBeDisabled();
+  fireEvent.change(input, { target: { value: "Primera tarea" } });
+  expect(button).not.toBeDisabled();
+  fireEvent.click(button);
+  expect(screen.getByText("Primera tarea")).toBeInTheDocument();
 });
