@@ -24,6 +24,10 @@ function App() {
     setTask("");
   };
 
+  const deleteTask = (id) => {
+    setTasks((prev) => prev.filter((task) => task.id !== id));
+  };
+
   const onKeyDown = (e) => {
     if (e.key === "Enter") {
       addTask();
@@ -70,7 +74,13 @@ function App() {
       )}
       <ul className="task-list">
         {tasks.map((t) => (
-          <TaskItem key={t.id} text={t.text} createdAt={t.createdAt} />
+          <TaskItem 
+            key={t.id} 
+            id={t.id}
+            text={t.text} 
+            createdAt={t.createdAt}
+            onDelete={deleteTask}
+          />
         ))}
       </ul>
       {tasks.length === 0 && <p className="empty">No hay tareas aún.</p>}

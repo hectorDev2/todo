@@ -1,5 +1,5 @@
 // Componente simple para renderizar una tarea con fecha/hora
-function TaskItem({ text, createdAt }) {
+function TaskItem({ id, text, createdAt, onDelete }) {
   const date = createdAt ? new Date(createdAt) : null;
   const formatted = date
     ? new Intl.DateTimeFormat(undefined, {
@@ -8,14 +8,30 @@ function TaskItem({ text, createdAt }) {
       }).format(date)
     : "";
 
+  const handleDelete = () => {
+    if (window.confirm(`¿Estás seguro de que quieres eliminar la tarea "${text}"?`)) {
+      onDelete(id);
+    }
+  };
+
   return (
     <li className="task-item">
-      <span className="task-text">{text}</span>
-      {formatted && (
-        <time className="task-time" dateTime={createdAt}>
-          {formatted}
-        </time>
-      )}
+      <div className="task-content">
+        <span className="task-text">{text}</span>
+        {formatted && (
+          <time className="task-time" dateTime={createdAt}>
+            {formatted}
+          </time>
+        )}
+      </div>
+      <button 
+        className="delete-button"
+        onClick={handleDelete}
+        title={`Eliminar tarea: ${text}`}
+        aria-label={`Eliminar tarea: ${text}`}
+      >
+        ✕
+      </button>
     </li>
   );
 }
