@@ -1,0 +1,934 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\usepackage{courier}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{amsthm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Laboratorio Frontend II}
+\rhead{Desarrollo de Software I}
+\cfoot{\thepage}
+
+\titleformat{\section}{\large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection.}{0.5em}{}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  showstringspaces=false,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{purple},
+  captionpos=b
+}
+
+\newtheorem{exercise}{Ejercicio}
+\newtheorem{solution}{Solución}
+
+\title{\vspace{-2em}Laboratorio Frontend II\\\large Guía 07 - Aplicación Avanzada de Gestión de Tareas}
+\author{Curso: Desarrollo de Software I}
+\date{Octubre 2025}
+
+\begin{document}
+\maketitle
+
+\section*{Origen}
+Implementación avanzada de una aplicación de gestión de tareas con React que incluye funcionalidades empresariales como sistema de memoria robusto, gestión de backups y edición en tiempo real.
+
+\section{Objetivos}
+Al finalizar esta sesión de laboratorio, el estudiante será capaz de:
+\begin{itemize}
+  \item Implementar un sistema de gestión de tareas completo con React.
+  \item Desarrollar un sistema robusto de persistencia de datos con localStorage.
+  \item Crear un sistema de backup y recuperación de datos.
+  \item Implementar validaciones avanzadas y manejo de duplicados.
+  \item Gestionar fechas de vencimiento con indicadores visuales.
+  \item Aplicar edición en línea de tareas con controles intuitivos.
+  \item Desarrollar un panel de administración de memoria.
+\end{itemize}
+
+\section{Capacidades Avanzadas}
+\begin{itemize}
+  \item Arquitectura modular con separación de responsabilidades.
+  \item Sistema de memoria con validación y sanitización de datos.
+  \item Manejo de estados complejos con React Hooks.
+  \item Implementación de patrones de diseño (Singleton para gestión de memoria).
+  \item Gestión avanzada de eventos y navegación por teclado.
+  \item Sistema de notificaciones y alertas contextual.
+  \item Responsive design con CSS Grid y Flexbox.
+\end{itemize}
+
+\section{Requerimientos}
+\begin{itemize}
+  \item Node.js v16 o superior.
+  \item React 18+ con Create React App.
+  \item Navegador moderno con soporte para localStorage.
+  \item Editor de código (VS Code recomendado).
+\end{itemize}
+
+\section{Arquitectura de la Aplicación}
+
+\subsection{Estructura del Proyecto}
+\begin{verbatim}
+todo-app/
+├── package.json
+├── public/
+│   ├── index.html
+│   ├── manifest.json
+│   └── favicon.ico
+├── src/
+│   ├── App.js              // Componente principal
+│   ├── App.css             // Estilos principales
+│   ├── TaskItem.js         // Componente de tarea individual
+│   ├── memory.js           // Sistema de gestión de memoria
+│   ├── index.js            // Punto de entrada
+│   └── index.css           // Estilos globales
+└── README.md
+\end{verbatim}
+
+\subsection{Funcionalidades Implementadas}
+\begin{itemize}
+  \item \textbf{Gestión de Tareas}: Crear, editar, eliminar con validación de duplicados
+  \item \textbf{Fechas de Vencimiento}: Asignación opcional con indicadores visuales
+  \item \textbf{Sistema de Memoria}: localStorage robusto con validación y migración
+  \item \textbf{Backup Automático}: Creación y restauración de copias de seguridad
+  \item \textbf{Edición en Línea}: Modificación directa con controles de guardar/cancelar
+  \item \textbf{Indicadores de Estado}: Tareas vencidas, próximas a vencer, completadas
+  \item \textbf{Panel de Administración}: Estadísticas y gestión de memoria
+\end{itemize}
+
+\section{Implementación Técnica}
+
+\subsection{Componente Principal (App.js)}
+\begin{lstlisting}[language=JavaScript,caption={Estructura principal de la aplicación}]
+import { useMemo, useState, useEffect } from "react";
+import "./App.css";
+import TaskItem from "./TaskItem";
+import taskMemory from "./memory";
+
+function App() {
+  const [task, setTask] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [tasks, setTasks] = useState([]);
+  const [memoryStats, setMemoryStats] = useState(null);
+  const [showMemoryInfo, setShowMemoryInfo] = useState(false);
+
+  // Cargar tareas del sistema de memoria al iniciar
+  useEffect(() => {
+    try {
+      const savedTasks = taskMemory.loadTasks();
+      setTasks(savedTasks);
+      console.log(`Cargadas ${savedTasks.length} tareas desde la memoria`);
+    } catch (error) {
+      console.error('Error cargando tareas:', error);
+    }
+  }, []);
+
+  // Guardar tareas en el sistema de memoria cuando cambie el estado
+  useEffect(() => {
+    if (tasks.length > 0 || JSON.stringify(tasks) !== JSON.stringify([])) {
+      const success = taskMemory.saveTasks(tasks);
+      if (!success) {
+        console.warn('No se pudieron guardar las tareas');
+      }
+    }
+  }, [tasks]);
+
+  // Actualizar estadísticas de memoria periódicamente
+  useEffect(() => {
+    const updateStats = () => {
+      setMemoryStats(taskMemory.getMemoryStats());
+    };
+    updateStats();
+    const interval = setInterval(updateStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const trimmed = task.trim();
+  const isDuplicate = useMemo(
+    () => tasks.some((t) => t.text.toLowerCase() === trimmed.toLowerCase()),
+    [tasks, trimmed]
+  );
+
+  const addTask = () => {
+    const t = trimmed;
+    if (!t || isDuplicate) return;
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setTasks((prev) => [
+      ...prev,
+      { 
+        id, 
+        text: t, 
+        createdAt: new Date().toISOString(),
+        dueDate: dueDate || null
+      },
+    ]);
+    setTask("");
+    setDueDate("");
+  };
+
+  const deleteTask = (id) => {
+    setTasks((prev) => prev.filter((task) => task.id !== id));
+  };
+
+  const editTask = (id, newText, newDueDate) => {
+    setTasks((prev) => 
+      prev.map((task) => 
+        task.id === id 
+          ? { ...task, text: newText, dueDate: newDueDate || null }
+          : task
+      )
+    );
+  };
+
+  return (
+    <div className="app-container">
+      <h1 className="app-title">
+        Lista de Tareas
+        <span className="task-counter">{tasks.length} tareas</span>
+        <button className="memory-toggle" 
+                onClick={() => setShowMemoryInfo(!showMemoryInfo)}>
+          💾
+        </button>
+      </h1>
+      {/* Panel de memoria y formulario de entrada */}
+      <div className="input-section">
+        <div className="input-row">
+          <input
+            placeholder="Escribe una tarea"
+            value={task}
+            onChange={(e) => setTask(e.target.value)}
+          />
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="date-input"
+          />
+          <button onClick={addTask} disabled={!trimmed || isDuplicate}>
+            Agregar
+          </button>
+        </div>
+      </div>
+      {/* Lista de tareas */}
+      <ul className="task-list">
+        {tasks.map((t) => (
+          <TaskItem
+            key={t.id}
+            id={t.id}
+            text={t.text}
+            createdAt={t.createdAt}
+            dueDate={t.dueDate}
+            onDelete={deleteTask}
+            onEdit={editTask}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export default App;
+\end{lstlisting}
+
+\subsection{Sistema de Memoria (memory.js)}
+\begin{lstlisting}[language=JavaScript,caption={Sistema robusto de gestión de memoria}]
+const STORAGE_KEYS = {
+  TASKS: 'todo-tasks',
+  APP_VERSION: 'todo-app-version',
+  LAST_BACKUP: 'todo-last-backup',
+  USER_SETTINGS: 'todo-user-settings'
+};
+
+const CURRENT_VERSION = '1.0.0';
+const MAX_BACKUP_ITEMS = 5;
+
+class TaskMemory {
+  constructor() {
+    this.initializeStorage();
+  }
+
+  // Inicializar el sistema de almacenamiento
+  initializeStorage() {
+    try {
+      if (!this.isLocalStorageAvailable()) {
+        console.warn('localStorage no disponible, usando memoria temporal');
+        this.fallbackStorage = new Map();
+        return;
+      }
+      this.checkVersionAndMigrate();
+      this.setupAutoBackup();
+    } catch (error) {
+      console.error('Error inicializando almacenamiento:', error);
+      this.fallbackStorage = new Map();
+    }
+  }
+
+  // Verificar disponibilidad de localStorage
+  isLocalStorageAvailable() {
+    try {
+      const test = '__localStorage_test__';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Cargar tareas desde la memoria
+  loadTasks() {
+    try {
+      if (this.fallbackStorage) {
+        return this.fallbackStorage.get(STORAGE_KEYS.TASKS) || [];
+      }
+      const tasksJson = localStorage.getItem(STORAGE_KEYS.TASKS);
+      if (!tasksJson) return [];
+      
+      const tasks = JSON.parse(tasksJson);
+      if (!Array.isArray(tasks)) {
+        console.warn('Datos inválidos, inicializando array vacío');
+        return [];
+      }
+      
+      const validTasks = tasks.filter(task => this.validateTask(task))
+                              .map(task => this.sanitizeTask(task));
+      return validTasks;
+    } catch (error) {
+      console.error('Error cargando tareas:', error);
+      this.createBackup('error-recovery');
+      return [];
+    }
+  }
+
+  // Guardar tareas en la memoria
+  saveTasks(tasks) {
+    try {
+      if (!Array.isArray(tasks)) {
+        throw new Error('Las tareas deben ser un array');
+      }
+      
+      const validTasks = tasks.filter(task => this.validateTask(task))
+                              .map(task => this.sanitizeTask(task));
+      const tasksJson = JSON.stringify(validTasks);
+      
+      if (this.fallbackStorage) {
+        this.fallbackStorage.set(STORAGE_KEYS.TASKS, validTasks);
+        return true;
+      }
+      
+      localStorage.setItem(STORAGE_KEYS.TASKS, tasksJson);
+      localStorage.setItem('todo-last-saved', new Date().toISOString());
+      return true;
+    } catch (error) {
+      console.error('Error guardando tareas:', error);
+      return false;
+    }
+  }
+
+  // Validar estructura de una tarea
+  validateTask(task) {
+    if (!task || typeof task !== 'object') return false;
+    if (!task.id || typeof task.id !== 'string') return false;
+    if (!task.text || typeof task.text !== 'string') return false;
+    if (!task.createdAt || !this.isValidDate(task.createdAt)) return false;
+    return true;
+  }
+
+  // Limpiar y sanitizar una tarea
+  sanitizeTask(task) {
+    return {
+      id: String(task.id).trim(),
+      text: String(task.text).trim(),
+      createdAt: this.isValidDate(task.createdAt) ? 
+        task.createdAt : new Date().toISOString(),
+      dueDate: task.dueDate && this.isValidDate(task.dueDate) ? 
+        task.dueDate : null
+    };
+  }
+
+  // Crear backup de las tareas actuales
+  createBackup(reason = 'manual') {
+    try {
+      if (this.fallbackStorage) return false;
+      
+      const currentTasks = this.loadTasks();
+      const backup = {
+        tasks: currentTasks,
+        timestamp: new Date().toISOString(),
+        reason: reason,
+        version: CURRENT_VERSION
+      };
+      
+      const backupKey = `todo-backup-${Date.now()}`;
+      localStorage.setItem(backupKey, JSON.stringify(backup));
+      localStorage.setItem(STORAGE_KEYS.LAST_BACKUP, backupKey);
+      
+      this.cleanOldBackups();
+      return true;
+    } catch (error) {
+      console.error('Error creando backup:', error);
+      return false;
+    }
+  }
+}
+
+// Crear instancia única (singleton)
+const taskMemory = new TaskMemory();
+export default taskMemory;
+\end{lstlisting}
+
+\subsection{Componente de Tarea (TaskItem.js)}
+\begin{lstlisting}[language=JavaScript,caption={Componente avanzado de tarea individual}]
+import { useState } from "react";
+
+function TaskItem({ id, text, createdAt, dueDate, onDelete, onEdit }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(text);
+  const [editDueDate, setEditDueDate] = useState(dueDate || "");
+
+  // Formateo de fechas
+  const createdDate = createdAt ? new Date(createdAt) : null;
+  const formattedCreated = createdDate
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(createdDate)
+    : "";
+
+  const dueDateObj = dueDate ? new Date(dueDate) : null;
+  const formattedDueDate = dueDateObj
+    ? new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+      }).format(dueDateObj)
+    : "";
+
+  // Verificar si la tarea está vencida
+  const isOverdue = dueDateObj && dueDateObj < new Date();
+  const isDueSoon = dueDateObj && !isOverdue && 
+    (dueDateObj.getTime() - new Date().getTime()) < (24 * 60 * 60 * 1000);
+
+  const handleDelete = () => {
+    if (window.confirm(`¿Eliminar la tarea "${text}"?`)) {
+      onDelete(id);
+    }
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    if (editText.trim()) {
+      onEdit(id, editText.trim(), editDueDate);
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditText(text);
+    setEditDueDate(dueDate || "");
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      handleCancel();
+    }
+  };
+
+  // Modo de edición
+  if (isEditing) {
+    return (
+      <li className="task-item editing">
+        <div className="edit-form">
+          <input
+            type="text"
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="edit-input"
+            autoFocus
+          />
+          <input
+            type="date"
+            value={editDueDate}
+            onChange={(e) => setEditDueDate(e.target.value)}
+            className="edit-date-input"
+          />
+          <div className="edit-buttons">
+            <button onClick={handleSave} className="save-button"
+                    title="Guardar cambios">✓</button>
+            <button onClick={handleCancel} className="cancel-button"
+                    title="Cancelar edición">✕</button>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  // Vista normal con indicadores de estado
+  return (
+    <li className={`task-item ${isOverdue ? 'overdue' : ''} 
+                   ${isDueSoon ? 'due-soon' : ''}`}>
+      <div className="task-content">
+        <span className="task-text">{text}</span>
+        <div className="task-dates">
+          {formattedCreated && (
+            <time className="task-time created" dateTime={createdAt}>
+              Creada: {formattedCreated}
+            </time>
+          )}
+          {formattedDueDate && (
+            <time className={`task-time due-date 
+                            ${isOverdue ? 'overdue' : ''} 
+                            ${isDueSoon ? 'due-soon' : ''}`} 
+                  dateTime={dueDate}>
+              {isOverdue ? '⚠️ Vencida: ' : 
+               isDueSoon ? '⏰ Vence: ' : 
+               '📅 Vence: '}{formattedDueDate}
+            </time>
+          )}
+        </div>
+      </div>
+      <div className="task-actions">
+        <button className="edit-button" onClick={handleEdit}
+                title={`Editar tarea: ${text}`}>✏️</button>
+        <button className="delete-button" onClick={handleDelete}
+                title={`Eliminar tarea: ${text}`}>✕</button>
+      </div>
+    </li>
+  );
+}
+
+export default TaskItem;
+\end{lstlisting}
+
+\section{Características Técnicas Avanzadas}
+
+\subsection{Sistema de Validación}
+\begin{itemize}
+  \item \textbf{Validación de duplicados}: Comparación case-insensitive en tiempo real
+  \item \textbf{Sanitización de datos}: Limpieza automática de inputs maliciosos
+  \item \textbf{Validación de fechas}: Verificación de formatos ISO y fechas válidas
+  \item \textbf{Fallback de memoria}: Sistema de respaldo cuando localStorage no está disponible
+\end{itemize}
+
+\subsection{Gestión de Estado}
+\begin{itemize}
+  \item \textbf{useState}: Manejo de estado local de componentes
+  \item \textbf{useEffect}: Efectos secundarios para persistencia y carga
+  \item \textbf{useMemo}: Optimización de cálculos costosos (validación de duplicados)
+  \item \textbf{Patrón Singleton}: Instancia única del sistema de memoria
+\end{itemize}
+
+\subsection{Experiencia de Usuario}
+\begin{itemize}
+  \item \textbf{Navegación por teclado}: Enter para guardar, Escape para cancelar
+  \item \textbf{Confirmaciones}: Diálogos de confirmación para acciones destructivas
+  \item \textbf{Retroalimentación visual}: Estados de carga, error y éxito
+  \item \textbf{Responsive design}: Adaptación a diferentes tamaños de pantalla
+\end{itemize}
+
+\section{Sistema de Estilos CSS}
+
+\subsection{Arquitectura CSS}
+\begin{lstlisting}[language=CSS,caption={Estilos responsivos y accesibles}]
+/* Contenedor principal */
+.app-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 1.5rem 2rem 2.5rem;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+/* Título principal con contador y botón de memoria */
+.app-title {
+  text-align: center;
+  margin-top: 0;
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.task-counter {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 0.9rem;
+  color: #555;
+  background: #f2f6fb;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+.memory-toggle {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* Panel de información de memoria */
+.memory-panel {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.memory-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Formulario de entrada */
+.input-section {
+  margin-bottom: 1.5rem;
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+input[type="text"] {
+  flex: 2;
+}
+
+.date-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* Items de tarea */
+.task-item {
+  padding: 0.75rem;
+  border: 1px solid #e3e3e3;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.task-item.overdue {
+  border-color: #dc3545;
+  background: #fdf2f2;
+}
+
+.task-item.due-soon {
+  border-color: #ff9800;
+  background: #fff8e1;
+}
+
+.task-item.editing {
+  padding: 1rem;
+  background: #f0f7ff;
+  border-color: #1976d2;
+}
+
+/* Contenido de tarea */
+.task-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.task-text {
+  font-weight: 500;
+  margin-right: 12px;
+}
+
+.task-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.task-time {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.task-time.created {
+  color: #9ca3af;
+}
+
+.task-time.due-date {
+  font-weight: 500;
+}
+
+.task-time.due-date.overdue {
+  color: #dc3545;
+}
+
+.task-time.due-date.due-soon {
+  color: #ff9800;
+}
+
+/* Acciones de tarea */
+.task-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.edit-button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 32px;
+  height: 32px;
+}
+
+.edit-button:hover {
+  background: #45a049;
+}
+
+.delete-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 32px;
+  height: 32px;
+}
+
+.delete-button:hover {
+  background: #c82333;
+}
+
+/* Formulario de edición */
+.edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.edit-input {
+  flex: 2;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.edit-date-input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.save-button {
+  background: #4caf50;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  min-width: 32px;
+  height: 32px;
+}
+
+.cancel-button {
+  background: #6c757d;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  min-width: 32px;
+  height: 32px;
+}
+\end{lstlisting}
+
+\section{Actividades Avanzadas Implementadas}
+
+\begin{enumerate}
+  \item \textbf{Sistema de Backup Automático}
+  \begin{itemize}
+    \item Backup automático cada hora si hay cambios
+    \item Máximo 5 backups simultáneos
+    \item Restauración selectiva por fecha y motivo
+  \end{itemize}
+
+  \item \textbf{Gestión de Memoria Inteligente}
+  \begin{itemize}
+    \item Verificación de espacio disponible
+    \item Limpieza automática de datos antiguos
+    \item Migración de versiones automática
+  \end{itemize}
+
+  \item \textbf{Indicadores Visuales Contextuales}
+  \begin{itemize}
+    \item ⚠️ Tareas vencidas (rojo)
+    \item ⏰ Tareas próximas a vencer (naranja)
+    \item 📅 Fechas normales (gris)
+  \end{itemize}
+
+  \item \textbf{Panel de Administración}
+  \begin{itemize}
+    \item Estadísticas de uso de memoria
+    \item Gestión manual de backups
+    \item Limpieza total de datos con confirmación
+  \end{itemize}
+\end{enumerate}
+
+\section{Testing y Calidad}
+
+\subsection{Pruebas Incluidas}
+\begin{lstlisting}[language=JavaScript,caption={Ejemplo de test unitario}]
+test("puede agregar una tarea", () => {
+  render(<App />);
+  const input = screen.getByPlaceholderText(/escribe una tarea/i);
+  const button = screen.getByRole("button", { name: /agregar/i });
+  
+  expect(button).toBeDisabled();
+  fireEvent.change(input, { target: { value: "Primera tarea" } });
+  expect(button).not.toBeDisabled();
+  
+  fireEvent.click(button);
+  expect(screen.getByText("Primera tarea")).toBeInTheDocument();
+});
+\end{lstlisting}
+
+\subsection{Manejo de Errores}
+\begin{itemize}
+  \item Try-catch en todas las operaciones de localStorage
+  \item Validación de entrada en tiempo real
+  \item Mensajes de error contextual y accesibles
+  \item Recuperación automática de errores con backups
+\end{itemize}
+
+\section{Instalación y Ejecución}
+
+\subsection{Comandos de Desarrollo}
+\begin{verbatim}
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm start
+
+# Ejecutar tests
+npm test
+
+# Construir para producción
+npm run build
+\end{verbatim}
+
+\subsection{Scripts Disponibles}
+\begin{itemize}
+  \item \texttt{npm start}: Servidor de desarrollo en \url{http://localhost:3000}
+  \item \texttt{npm test}: Suite de tests con watching automático
+  \item \texttt{npm run build}: Compilación optimizada para producción
+  \item \texttt{npm run eject}: Exposición de configuración (no reversible)
+\end{itemize}
+
+\section{Referencias y Recursos}
+
+\begin{itemize}
+  \item \textbf{Documentación React}: \url{https://react.dev/learn}
+  \item \textbf{React Hooks}: \url{https://react.dev/reference/react}
+  \item \textbf{Testing Library}: \url{https://testing-library.com/docs/react-testing-library/intro/}
+  \item \textbf{Web Storage API}: \url{https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API}
+  \item \textbf{CSS Grid Guide}: \url{https://css-tricks.com/snippets/css/complete-guide-grid/}
+\end{itemize}
+
+\newpage
+
+\begin{exercise}
+\textbf{Ejercicio 1: Implementación del Sistema de Memoria Robusto}
+
+Desarrollar un sistema de gestión de memoria que incluya:
+\begin{itemize}
+  \item Validación automática de datos
+  \item Sistema de backup y recuperación
+  \item Migración de versiones
+  \item Fallback para navegadores sin localStorage
+\end{itemize}
+\end{exercise}
+
+\begin{solution}
+La implementación propuesta incluye:
+
+\begin{enumerate}
+  \item \textbf{Clase TaskMemory}: Singleton para gestión centralizada
+  \item \textbf{Validación}: Verificación de estructura y tipos de datos
+  \item \textbf{Sanitización}: Limpieza automática de datos de entrada
+  \item \textbf{Backup automático}: Cada hora si hay cambios detectados
+  \item \textbf{Recuperación}: Sistema de restauración selectiva
+\end{enumerate}
+
+Resultado: Sistema robusto y escalable que garantiza la integridad de los datos.
+\[
+\boxed{\text{Sistema de memoria empresarial implementado exitosamente}}
+\]
+\end{solution}
+
+\begin{exercise}
+\textbf{Ejercicio 2: Implementación de Edición en Línea}
+
+Crear un sistema de edición que permita:
+\begin{itemize}
+  \item Edición directa en la interfaz
+  \item Validación en tiempo real
+  \item Controles de guardar/cancelar
+  \item Navegación por teclado
+\end{itemize}
+\end{exercise}
+
+\begin{solution}
+Implementación lograda mediante:
+
+\begin{enumerate}
+  \item \textbf{Estado local}: useState para modo de edición
+  \item \textbf{Formulario inline}: Conversión de vista a edición
+  \item \textbf{Eventos de teclado}: Enter/Escape para control rápido
+  \item \textbf{Validación}: Verificación antes de guardar cambios
+\end{enumerate}
+
+Resultado: Experiencia de usuario fluida y intuitiva.
+\[
+\boxed{\text{Sistema de edición inline completamente funcional}}
+\]
+\end{solution}
+
+\end{document}

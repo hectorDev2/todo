@@ -5,7 +5,7 @@ body, html, #root, .app-container {
 }
 
 .app-container {
-  max-width: 480px;
+  max-width: 600px;
   margin: 40px auto;
   padding: 1.5rem 2rem 2.5rem;
   border: 1px solid #ddd;
@@ -18,6 +18,98 @@ body, html, #root, .app-container {
   text-align: center;
   margin-top: 0;
   font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.memory-toggle {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.memory-toggle:hover {
+  background: #5a6268;
+}
+
+.memory-panel {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.memory-panel h3 {
+  margin: 0 0 1rem 0;
+  color: #495057;
+  font-size: 1.1rem;
+}
+
+.memory-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.memory-stats p {
+  margin: 0;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.memory-stats strong {
+  color: #495057;
+}
+
+.memory-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-button {
+  background: #17a2b8;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.backup-button:hover {
+  background: #138496;
+}
+
+.restore-button {
+  background: #28a745;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.restore-button:hover {
+  background: #218838;
+}
+
+.clear-button {
+  background: #dc3545;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.clear-button:hover {
+  background: #c82333;
 }
 
 .task-counter {
@@ -31,6 +123,10 @@ body, html, #root, .app-container {
   vertical-align: middle;
 }
 
+.input-section {
+  margin-bottom: 1.5rem;
+}
+
 .input-row {
   display: flex;
   gap: 8px;
@@ -38,11 +134,19 @@ body, html, #root, .app-container {
 }
 
 input {
-  flex: 1;
   padding: 0.6rem 0.75rem;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
+}
+
+input[type="text"] {
+  flex: 2;
+}
+
+.date-input {
+  flex: 1;
+  min-width: 140px;
 }
 
 input:focus {
@@ -83,31 +187,96 @@ button:disabled {
 }
 
 .task-item {
-  padding: 0.55rem 0.75rem;
+  padding: 0.75rem;
   border: 1px solid #e3e3e3;
-  border-radius: 6px;
-  margin-bottom: 6px;
+  border-radius: 8px;
+  margin-bottom: 8px;
   background: #fafafa;
   font-size: 0.95rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.task-item.overdue {
+  border-color: #dc3545;
+  background: #fdf2f2;
+}
+
+.task-item.due-soon {
+  border-color: #ff9800;
+  background: #fff8e1;
+}
+
+.task-item.editing {
+  padding: 1rem;
+  background: #f0f7ff;
+  border-color: #1976d2;
 }
 
 .task-content {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
   flex: 1;
 }
 
 .task-text {
+  font-weight: 500;
   margin-right: 12px;
+}
+
+.task-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
 }
 
 .task-time {
   color: #6b7280;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+}
+
+.task-time.created {
+  color: #9ca3af;
+}
+
+.task-time.due-date {
+  font-weight: 500;
+}
+
+.task-time.due-date.overdue {
+  color: #dc3545;
+}
+
+.task-time.due-date.due-soon {
+  color: #ff9800;
+}
+
+.task-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.edit-button {
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-button:hover {
+  background: #45a049;
 }
 
 .delete-button {
@@ -118,7 +287,6 @@ button:disabled {
   padding: 0.4rem 0.6rem;
   font-size: 0.9rem;
   cursor: pointer;
-  margin-left: 8px;
   min-width: 32px;
   height: 32px;
   display: flex;
@@ -131,9 +299,53 @@ button:disabled {
   background: #c82333;
 }
 
-.delete-button:focus {
-  outline: 2px solid #dc3545;
-  outline-offset: 2px;
+.edit-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.edit-input {
+  flex: 2;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.edit-date-input {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.edit-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.save-button {
+  background: #4caf50;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  min-width: 32px;
+  height: 32px;
+}
+
+.save-button:hover {
+  background: #45a049;
+}
+
+.cancel-button {
+  background: #6c757d;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  min-width: 32px;
+  height: 32px;
+}
+
+.cancel-button:hover {
+  background: #5a6268;
 }
 
 .empty {
